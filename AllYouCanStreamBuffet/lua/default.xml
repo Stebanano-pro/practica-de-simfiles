@@ -1,0 +1,1102 @@
+<GAME Type="ActorFrame"><children>
+
+	<LAER Type="Quad" OnCommand="sleep,10000" />
+
+	<LAER Type="Quad"
+		InitCommand="%function (self)
+		
+			--[[
+			TODO:
+				Test it
+			]]
+			
+			sort_DEchecked = false;
+			
+			taroProfile = PROFILEMAN:GetMachineProfile():GetSaved()
+			taroProfile.UKSRT7Stream = taroProfile.UKSRT7Stream or { highScore = 0 }
+			goty2_stream_highScore = taroProfile.UKSRT7Stream.highScore;
+			
+			if not goty2_stream_todayBest then goty2_stream_todayBest = 0 end
+					
+			function goty2_round(num)
+				return math.floor((num * 100) + 0.5) / 100
+			end
+			function goty2_round1(num)
+				return math.floor((num * 10) + 0.5) / 10
+			end
+			function goty2_round0(num)
+				return math.floor(num + 0.5)
+			end
+			
+			checked = false;
+			
+			songName = GAMESTATE:GetCurrentSong():GetSongDir();
+		
+			function goty2_sound(soundName)
+				SOUND:PlayOnce(songName..'lua/'..soundName);
+			end
+					
+			goty2_keys = {0,0,0,0,0,0,0,0}
+			
+			goty2_difficultyP1 = 3;
+			goty2_difficultyP2 = 3;
+			
+			goty2_stream_held = {0,0,0,0,0,0,0,0};
+			
+			goty2_stream_score = {0,0};
+			goty2_stream_multiplier = {1,1};
+			
+			if GAMESTATE:IsPlayerEnabled(PLAYER_1) then
+				goty2_difficultyP1 = tonumber(GAMESTATE:GetCurrentSteps(PLAYER_1):GetDifficulty());
+				for i=0, 10, 0.01 do
+					if GAMESTATE:PlayerIsUsingModifier(0,goty2_round(i)..'x') then goty2_stream_multiplier[1] = i; break; end
+				end
+			end
+			if GAMESTATE:IsPlayerEnabled(PLAYER_2) then
+				goty2_difficultyP2 = tonumber(GAMESTATE:GetCurrentSteps(PLAYER_2):GetDifficulty());
+				for i=0, 10, 0.01 do
+					if GAMESTATE:PlayerIsUsingModifier(1,goty2_round(i)..'x') then goty2_stream_multiplier[2] = i; break; end
+				end
+			end
+		
+			goty2_stream_note = {{},{}}
+			goty2_stream_nptr = {1,1};
+			goty2_stream_dirs = {90,0,180,-90}
+			
+			goty2_stream_show = 12;
+			
+			goty2_stream_notespacing = {SCREEN_HEIGHT*0.08,SCREEN_HEIGHT*0.08};
+			
+			goty2_stream_diff = {1,1,1,1,2,3}
+			
+			goty2_stream_patterns = {
+				{1,2,3,4,3,2},
+				{1,3,2,4,2,3},
+				{1,2,1,4,2,4},
+				{1,3,1,4,3,4},
+				{1,2,1,4,1,2,1,4},
+				{1,3,1,4,1,3,1,4},
+				{1,4,1,4,2,4,2,4},
+				{1,4,1,4,1,2,1,2},
+				{1,2,1,2,3,4,3,4},
+				{1,3,1,3,2,4,2,4},
+				{1,2,3,4,2,3},
+				{1,3,2,4,3,2},
+				{1,2,3,4},
+				{1,3,2,4},
+				{1,4,3,2},
+				{1,4,2,3},
+				{1,4,1,3,1,2},
+				{1,4,1,2,1,3},
+				{1,2,3,4,2,3,2,3},
+				{1,3,2,4,3,2,3,2},
+			}
+			
+			goty2_stream_patterns2 = {
+				{1,2,4,2},
+				{1,3,4,3},
+				{1,2,4,2,3,4},
+				{1,3,4,3,2,4},
+				{1,2,4,1,3,4},
+				{1,3,4,1,2,4},
+				{1,2,3,2,4,2},
+				{1,3,2,3,4,3},
+				{1,2,4,1,4,2},
+				{1,3,4,1,4,3},
+				{1,2,4,2,4,2},
+				{1,3,4,3,4,3},
+			}
+			
+			goty2_stream_patterns3 = {
+				{1,2,2,4},
+				{1,3,3,4},
+				{1,2,2,3},
+				{1,3,3,2},
+				{1,4,3,3},
+				{1,4,2,2},
+			}
+			
+			--generate one chart per day, so everyone in the tournament plays the same chart*
+			--*unless the machine shits the bed
+			if not goty2_stream_chart1 then
+				goty2_stream_chart1 = {};
+				
+				local n = 1;
+				local r = -1;
+				for j=1,200 do
+					n = math.random(1,table.getn(goty2_stream_patterns));
+					for i=1,table.getn(goty2_stream_patterns[n]) do
+						table.insert(goty2_stream_chart1,goty2_stream_patterns[n][i]);
+					end
+				end
+				
+			end
+			
+			if not goty2_stream_chart2 then
+				goty2_stream_chart2 = {};
+				
+				local n = 1;
+				local r = -1;
+				for j=1,200 do
+					if math.mod(j,8) == 0 then
+						n = math.random(1,table.getn(goty2_stream_patterns3));
+						for i=1,table.getn(goty2_stream_patterns3[n]) do
+							table.insert(goty2_stream_chart2,goty2_stream_patterns3[n][i]);
+						end
+					elseif math.mod(j,8) == 3 or math.mod(j,8) == 4 or math.mod(j,8) == 7 then
+						n = math.random(1,table.getn(goty2_stream_patterns2));
+						for i=1,table.getn(goty2_stream_patterns2[n]) do
+							table.insert(goty2_stream_chart2,goty2_stream_patterns2[n][i]);
+						end
+					else
+						n = math.random(1,table.getn(goty2_stream_patterns));
+						for i=1,table.getn(goty2_stream_patterns[n]) do
+							table.insert(goty2_stream_chart2,goty2_stream_patterns[n][i]);
+						end
+					end
+				end
+				
+			end
+			
+			if not goty2_stream_chart3 then
+				goty2_stream_chart3 = {};
+				
+				local n = 1;
+				local r = -1;
+				for j=1,200 do
+					if math.mod(j,4) ~= 0 then
+						n = math.random(1,table.getn(goty2_stream_patterns2));
+						for i=1,table.getn(goty2_stream_patterns2[n]) do
+							table.insert(goty2_stream_chart3,goty2_stream_patterns2[n][i]);
+						end
+					else
+						n = math.random(1,table.getn(goty2_stream_patterns3));
+						for i=1,table.getn(goty2_stream_patterns3[n]) do
+							table.insert(goty2_stream_chart3,goty2_stream_patterns3[n][i]);
+						end
+					end
+				end
+				
+			end
+			
+			function goty2_stream_nextn(pn)
+				goty2_stream_nptr[pn] = goty2_stream_nptr[pn]+1;
+				if goty2_stream_nptr[pn] > table.getn(goty2_stream_note[pn]) then
+					goty2_stream_nptr[pn] = 1
+				end
+			end
+			
+			function goty2_stream_gety(n)
+				return SCREEN_HEIGHT*0.25;
+			end
+			
+			goty2_stream_scale = 0.8;
+			goty2_stream_speedmod = 1.5;
+			
+			goty2_stream_axs = {-96,-32,32,96};
+			
+			function goty2_stream_quantize(obj, b)
+				b = b/4;
+				local r = b-math.floor(b)
+				if r == 0 then goty2_stream_color(obj,4)
+				elseif r == 0.5 then goty2_stream_color(obj,8)
+				elseif (r > 0.33 and r < 0.34) or (r > 0.66 and r < 0.67) then goty2_stream_color(obj,12)
+				elseif r == 0.25 or r == 0.75 then goty2_stream_color(obj,16)
+				elseif (r > 0.166 and r < 0.167) or (r > 0.83 and r < 0.84) then goty2_stream_color(obj,12)
+				elseif r == 0.125 or r == 0.375 or r == 0.625 or r == 0.875 then goty2_stream_color(obj,32)
+				else goty2_stream_color(obj,64) end
+			end
+			
+			function goty2_stream_color(obj, n)
+				if n == 4 then obj:diffuse(1,0.4,0.3,1); end
+				if n == 8 then obj:diffuse(0.3,0.7,1,1); end
+				if n == 12 then obj:diffuse(1,0.4,1,1); end
+				if n == 16 then obj:diffuse(0.3,1,0.4,1); end
+				if n == 32 then obj:diffuse(1,0.8,0.3,1); end
+				if n == 64 then obj:diffuse(0.3,1,0.7,1); end
+			end
+			
+			function goty2_stream_placenote(pn,time,dir)
+				local h = goty2_stream_notespacing[pn];
+				
+				--Trace('nptr: '..goty2_stream_nptr[pn]);
+				--Trace('Place Note for P'..pn);
+				
+				local a = goty2_stream_note[pn][goty2_stream_nptr[pn]];
+				if not a then return end
+				
+				local b = a.actor;
+				
+				table.insert(goty2_stream_mynotes[pn],b);
+				
+				b:hidden(0);
+				
+				goty2_stream_quantize(b, time-1);
+				b:zoom(1)
+				b:rotationz(goty2_stream_dirs[dir]);
+				b:x((SCREEN_WIDTH*-0.25)+((pn)*SCREEN_CENTER_X)+(goty2_stream_axs[dir]));
+				b:y(goty2_stream_gety(0)+((time-1)*h));
+				
+				Trace(b:GetX());
+				
+				goty2_stream_nextn(pn);
+			end
+			
+			goty2_stream_curnotep1 = 1;
+			goty2_stream_curnotep2 = 1;
+			
+			function goty2_stream_update(pn,move)
+			
+				Trace('Update player '..pn);
+				
+				if not goty2_stream_mynotes[pn] then
+					return;
+				end
+				
+				if not goty2_stream_mynotes[pn][1] then
+					return;
+				end
+				
+				if move then
+					goty2_stream_mynotes[pn][1]:linear(1/math.max(goty2_stream_nps[pn],10));
+					goty2_stream_mynotes[pn][1]:diffusealpha(-1);
+					goty2_stream_mynotes[pn][1]:zoom(1.4);
+					goty2_stream_mynotes[pn][1]:sleep(0);
+					goty2_stream_mynotes[pn][1]:diffusealpha(1);
+					goty2_stream_mynotes[pn][1]:zoom(1);
+				
+					local ind = _G['goty2_stream_curnotep'..pn]
+					local head = _G['goty2_stream_chart'..goty2_stream_diff[_G['goty2_difficultyP'..pn]+1]][ind]
+					goty2_stream_mynotes[pn][1]:x((SCREEN_WIDTH*-0.25)+((pn)*SCREEN_CENTER_X)+(goty2_stream_axs[head]));
+					goty2_stream_mynotes[pn][1]:rotationz(goty2_stream_dirs[head]);
+					goty2_stream_quantize(goty2_stream_mynotes[pn][1], ind-1);
+				end
+				
+				for i=2,goty2_stream_show do
+					if move then
+						goty2_stream_mynotes[pn][i]:linear(1/math.max(goty2_stream_nps[pn],10));
+						goty2_stream_mynotes[pn][i]:y(goty2_stream_gety(0)+(goty2_stream_notespacing[pn]*(i-2)));
+						goty2_stream_mynotes[pn][i]:sleep(0);
+						goty2_stream_mynotes[pn][i]:y(goty2_stream_gety(0)+(goty2_stream_notespacing[pn]*(i-1)));
+						
+						local ind = _G['goty2_stream_curnotep'..pn]+i-1
+						local body = _G['goty2_stream_chart'..goty2_stream_diff[_G['goty2_difficultyP'..pn]+1]][ind]
+						goty2_stream_mynotes[pn][i]:x((SCREEN_WIDTH*-0.25)+((pn)*SCREEN_CENTER_X)+(goty2_stream_axs[body]));
+						goty2_stream_mynotes[pn][i]:rotationz(goty2_stream_dirs[body]);
+						goty2_stream_quantize(goty2_stream_mynotes[pn][i], ind-1);
+					else
+						goty2_stream_mynotes[pn][i]:linear(0.1);
+						goty2_stream_mynotes[pn][i]:y(goty2_stream_gety(0)+(goty2_stream_notespacing[pn]*(i-1)));
+					end
+				end
+				
+			end
+			
+		end"
+		StartMessageCommand="%function(self)
+		
+			if GAMESTATE:GetSongBeat()>=0 and not checked then
+				
+				----------------------
+				-- grab everything? --
+				----------------------
+				if SCREENMAN:GetTopScreen():GetChild('LifeP1') then LifeP1 = SCREENMAN:GetTopScreen():GetChild('LifeP1') end
+				if SCREENMAN:GetTopScreen():GetChild('LifeP2') then LifeP2 = SCREENMAN:GetTopScreen():GetChild('LifeP2') end
+				if SCREENMAN:GetTopScreen():GetChild('ScoreP1') then ScoreP1 = SCREENMAN:GetTopScreen():GetChild('ScoreP1') end
+				if SCREENMAN:GetTopScreen():GetChild('ScoreP2') then ScoreP2 = SCREENMAN:GetTopScreen():GetChild('ScoreP2') end
+				if SCREENMAN:GetTopScreen():GetChild('BPMDisplay') then BPMDisplay = SCREENMAN:GetTopScreen():GetChild('BPMDisplay') end
+				if SCREENMAN:GetTopScreen():GetChild('LifeFrame') then LifeFrame = SCREENMAN:GetTopScreen():GetChild('LifeFrame') end
+				if SCREENMAN:GetTopScreen():GetChild('ScoreFrame') then ScoreFrame = SCREENMAN:GetTopScreen():GetChild('ScoreFrame') end
+				if SCREENMAN:GetTopScreen():GetChild('Lyrics') then Lyrics = SCREENMAN:GetTopScreen():GetChild('Lyrics') end
+				if SCREENMAN:GetTopScreen():GetChild('SongForeground') then SongForeground = SCREENMAN:GetTopScreen():GetChild('SongForeground') end
+				if SCREENMAN:GetTopScreen():GetChild('SongBackground') then SongBackground = SCREENMAN:GetTopScreen():GetChild('SongBackground') end
+				if SCREENMAN:GetTopScreen():GetChild('Overlay') then Overlay = SCREENMAN:GetTopScreen():GetChild('Overlay') end
+				if SCREENMAN:GetTopScreen():GetChild('Underlay') then Underlay = SCREENMAN:GetTopScreen():GetChild('Underlay') end
+				
+				--------------------------
+				-- hide everything? y/n --
+				--------------------------
+				mod_hideall = true;
+				if mod_hideall == true then
+					if LifeFrame then LifeFrame:hidden(1) end
+					if LifeP1 then LifeP1:hidden(1) end
+					if LifeP2 then LifeP2:hidden(1) end
+					if ScoreP1 then ScoreP1:hidden(1) end
+					if ScoreP2 then ScoreP2:hidden(1) end
+					if BPMDisplay then BPMDisplay:hidden(1) end
+					if Overlay then Overlay:hidden(1) end
+					if Underlay then Underlay:hidden(1) end
+					if ScoreFrame then ScoreFrame:hidden(1) end
+				end
+				
+				P1 = SCREENMAN:GetTopScreen():GetChild('PlayerP1');
+				P2 = SCREENMAN:GetTopScreen():GetChild('PlayerP2');
+				--aliases for old times sake
+				
+				screen = SCREENMAN:GetTopScreen();
+				checked = true;
+			end
+			
+			--[[
+			--reset screen reset (alt for ctrl+f)
+			--reload screen if not using the correct noteskin
+			if not EditMode and not GAMESTATE:IsDemonstration() then
+				--SCREENMAN:SystemMessage(tostring(mimi_divine));
+				if not (GAMESTATE:IsHumanPlayer(0) and GAMESTATE:PlayerIsUsingModifier(0,'DivinEntity'))
+				or not (GAMESTATE:IsHumanPlayer(1) and GAMESTATE:PlayerIsUsingModifier(1,'DivinEntity'))
+				and not mimi_screenresets then
+					GAMESTATE:SetTemporaryEventMode(true);
+					GAMESTATE:ApplyGameCommand('mod,DivinEntity');
+					SCREENMAN:SetNewScreen('ScreenGameplay')
+					mimi_screenresets = true;
+					--SCREENMAN:SystemMessage(tostring(mimi_divine));
+				else
+					GAMESTATE:SetTemporaryEventMode(false);
+					mimi_screenresets = false;
+					if not DIVINE_ENTITY then
+						MESSAGEMAN:Broadcast('NoteskinWarning');
+						mimi_divine = false;
+					else
+						mimi_divine = true;
+						mimi_god = false;
+					end
+					--SCREENMAN:SystemMessage(tostring(mimi_divine));
+				end
+			end
+			]]
+			
+			if (GAMESTATE:IsHumanPlayer(0) and not GAMESTATE:PlayerIsUsingModifier(0,'DivinEntity'))
+			or (GAMESTATE:IsHumanPlayer(1) and not GAMESTATE:PlayerIsUsingModifier(1,'DivinEntity'))
+			and not sort_DEchecked then
+				sort_DEchecked = true;
+				MESSAGEMAN:Broadcast('NoteskinWarning');
+			end
+		
+			goty2_stream_mynotes = {{},{}};
+			
+			goty2_stream_score = {0,0};
+			
+			goty2_stream_wrongnotes = {0,0}
+			
+			goty2_stream_nps = {1,1}
+			goty2_stream_nps_count = {0,0}
+			goty2_stream_nps_timer = {0,0}
+			goty2_stream_nps_hitdelay = {0,0}
+			
+			goty2_stream_wrongwait = {0,0}
+			
+			goty2_stream_started = {0,0}
+			
+			for pn=1,2 do
+				if GAMESTATE:IsHumanPlayer(pn-1) then
+					for i=1,goty2_stream_show do
+						goty2_stream_placenote(pn,i,_G['goty2_stream_chart'..goty2_stream_diff[_G['goty2_difficultyP'..pn]+1]][i]);
+					end
+				end
+			end
+			
+			self:sleep(0.1);
+			self:queuecommand('Update');
+
+		end"
+		UpdateCommand="%function(self)
+			
+			--game logic
+			
+			--if goty2_stream_started[1] == 1 then
+				--Trace(goty2_stream_nps[1]..' nps');
+				--Trace(goty2_stream_notespacing[1]..' spacing');
+			--end
+			
+			for pn=1,2 do
+				
+				if goty2_stream_wrongwait[pn] > 0 then
+					goty2_stream_wrongwait[pn] = goty2_stream_wrongwait[pn]-0.02;
+				end
+				
+				if goty2_stream_started[pn] == 1 then
+					goty2_stream_nps_timer[pn] = goty2_stream_nps_timer[pn]+0.02
+					goty2_stream_nps_hitdelay[pn] = goty2_stream_nps_hitdelay[pn]+0.02
+				end
+				
+				if goty2_stream_nps_hitdelay[pn]>0.4 and GAMESTATE:GetSongBeat()<78.6 then
+					goty2_stream_nps_hitdelay[pn] = 0;
+					goty2_stream_nps_timer[pn] = 0;
+					goty2_stream_nps_count[pn] = 0;
+					goty2_stream_started[pn] = 0;
+					goty2_stream_nps[pn] = (goty2_stream_nps_count[pn]/math.max(goty2_stream_nps_timer[pn],1))*1.5;
+					goty2_stream_notespacing[pn] = (SCREEN_HEIGHT*0.08)+(SCREEN_HEIGHT*0.1*(goty2_stream_nps[pn]/25))*goty2_stream_multiplier[pn]*0.33
+					goty2_stream_update(pn);
+				end
+				
+				--_G['goty2_stream_p'..pn..'mtext']:settext(goty2_round1(goty2_stream_nps[pn]));
+				_G['goty2_stream_p'..pn..'mtext']:settext('');
+				
+				goty2_stream_nps[pn] = (goty2_stream_nps_count[pn]/math.max(goty2_stream_nps_timer[pn],1))*1.5;
+				goty2_stream_notespacing[pn] = (SCREEN_HEIGHT*0.08)+(SCREEN_HEIGHT*0.1*(goty2_stream_nps[pn]/25))*goty2_stream_multiplier[pn]*0.33
+				
+				if GAMESTATE:IsHumanPlayer(pn-1) then
+					_G['goty2_stream_p'..pn]:y(goty2_stream_gety(0));
+				else
+					_G['goty2_stream_p'..pn]:y(-1000);
+				end
+				
+				local bpn = pn-1;
+				for i=1,4 do
+				
+					--Trace(goty2_keys[i+(bpn*4)]);
+					
+					----------------------handle button presses-------------------
+					if GAMESTATE:IsHumanPlayer(pn-1) and GAMESTATE:GetSongBeat()>16 and GAMESTATE:GetSongBeat()<78.6 and goty2_stream_wrongwait[pn] <= 0 then
+						if goty2_keys[i+(bpn*4)] == 1 and goty2_stream_held[i+(bpn*4)] == 0 then
+							
+							if i==_G['goty2_stream_chart'..goty2_stream_diff[_G['goty2_difficultyP'..pn]+1]][_G['goty2_stream_curnotep'..pn]] then
+							
+								goty2_stream_started[pn] = 1;
+								goty2_stream_nps_hitdelay[pn] = 0;
+								
+								_G['goty2_stream_curnotep'..pn] = _G['goty2_stream_curnotep'..pn]+1;
+								
+								goty2_stream_nps_count[pn] = goty2_stream_nps_count[pn]+1;
+								goty2_stream_update(pn,true);
+								
+								goty2_stream_wrongnotes[pn] = 0;
+								
+								goty2_stream_score[pn] = goty2_stream_score[pn]+1;
+								
+								_G['goty2_stream_p'..pn..'ctext']:finishtweening();
+								_G['goty2_stream_p'..pn..'ctext']:settext(goty2_stream_score[pn]);
+								_G['goty2_stream_p'..pn..'ctext']:diffusealpha(0.5);
+								_G['goty2_stream_p'..pn..'ctext']:zoom(math.min(0.8+(goty2_stream_score[pn]/200),1.3));
+								_G['goty2_stream_p'..pn..'ctext']:linear(0.2);
+								_G['goty2_stream_p'..pn..'ctext']:zoom(math.min(0.7+(goty2_stream_score[pn]/200),1.2));
+								
+								_G['goty2_stream_p'..pn..'ctexta']:settext(goty2_stream_score[pn]);
+								_G['goty2_stream_p'..pn..'ctexta']:zoom(math.min(0.7+(goty2_stream_score[pn]/200),1.2));
+							
+							else
+								
+								if goty2_stream_wrongnotes[pn] > 2 then
+									goty2_stream_wrongnotes[pn] = 0;
+									goty2_stream_wrongwait[pn] = 0.8;
+									
+									goty2_stream_nps_hitdelay[pn] = 0;
+									goty2_stream_nps_timer[pn] = 0;
+									goty2_stream_nps_count[pn] = 0;
+									goty2_stream_started[pn] = 0;
+									goty2_stream_nps[pn] = (goty2_stream_nps_count[pn]/math.max(goty2_stream_nps_timer[pn],1))*1.5;
+									goty2_stream_notespacing[pn] = (SCREEN_HEIGHT*0.08)+(SCREEN_HEIGHT*0.1*(goty2_stream_nps[pn]/25))*goty2_stream_multiplier[pn]*0.33
+									goty2_stream_update(pn);
+									
+									goty2_sound('gung.ogg');
+									
+									_G['goty2_stream_nfp'..pn]:decelerate(0.4);
+									_G['goty2_stream_nfp'..pn]:addy(160);
+									_G['goty2_stream_nfp'..pn]:accelerate(0.4);
+									_G['goty2_stream_nfp'..pn]:addy(-160);
+								else
+									goty2_stream_wrongnotes[pn] = goty2_stream_wrongnotes[pn]+1;
+								end
+							
+							end
+							
+							goty2_stream_held[i+(bpn*4)] = 1
+							
+						end
+					end
+					
+					----------------------don't touch this------------------------
+					--release all buttons - used for detecting if a button is newly pressed, as opposed to held
+					if goty2_keys[i+(bpn*4)] == 0 then
+						goty2_stream_held[i+(bpn*4)] = 0
+					end
+					---------------------end don't touch this----------------------
+					
+				end
+				
+			end
+			
+			self:sleep(0.02);
+			self:queuecommand('Update');
+			
+		end"
+		KillCommand="%function(self)
+			--any cleanup, if necessary
+		end"
+	/>
+	
+	<LAER File="Cranked Pastry-BG.png" OnCommand="x,SCREEN_CENTER_X;y,SCREEN_CENTER_Y;zoomto,SCREEN_WIDTH,SCREEN_HEIGHT;diffuse,0.6,0.6,0.6,1" />
+	
+	<LAER Type="BitmapText" File="Combo numbers" Text="" InitCommand="%function(self) goty2_stream_p1ctext = self; end"
+	OnCommand="x,SCREEN_WIDTH*0.25;y,SCREEN_HEIGHT*0.5;diffusealpha,0.5;shadowlength,0;" Condition="GAMESTATE:IsHumanPlayer(0)" />
+	<LAER Type="BitmapText" File="Combo numbers" Text="" InitCommand="%function(self) goty2_stream_p2ctext = self; end"
+	OnCommand="x,SCREEN_WIDTH*0.75;y,SCREEN_HEIGHT*0.5;diffusealpha,0.5;shadowlength,0;" Condition="GAMESTATE:IsHumanPlayer(1)" />
+	
+	<!--LAER Type="BitmapText" File="_eurostile outline" Text="avg nps."
+	OnCommand="horizalign,right;x,-3+(SCREEN_WIDTH*0.25);y,SCREEN_HEIGHT*0.5+60;zoom,0.6;diffusealpha,0.5;shadowlength,0;" />
+	<LAER Type="BitmapText" File="_eurostile outline" Text="avg nps."
+	OnCommand="horizalign,right;x,-3+(SCREEN_WIDTH*0.75);y,SCREEN_HEIGHT*0.5+60;zoom,0.6;diffusealpha,0.5;shadowlength,0;" /-->
+	<LAER Type="BitmapText" File="ScoreDisplayPercentage percent text" Text="0" InitCommand="%function(self) goty2_stream_p1mtext = self; end"
+	OnCommand="horizalign,left;x,3+(SCREEN_WIDTH*0.25);y,SCREEN_HEIGHT*0.5+60;zoom,0.5;diffusealpha,0.5;shadowlength,0;" />
+	<LAER Type="BitmapText" File="ScoreDisplayPercentage percent text" Text="0" InitCommand="%function(self) goty2_stream_p2mtext = self; end"
+	OnCommand="horizalign,left;x,3+(SCREEN_WIDTH*0.75);y,SCREEN_HEIGHT*0.5+60;zoom,0.5;diffusealpha,0.5;shadowlength,0;" />
+	
+	<LAER Type="ActorFrame" InitCommand="%function(self) goty2_stream_p1 = self end" OnCommand="x,SCREEN_WIDTH*0.25;y,SCREEN_CENTER_Y;" ><children>
+		<LAER File="receptors.sprite" OnCommand="x,-96;rotationz,90;EffectClock,beat;DiffuseRamp;EffectColor1,0.4,0.4,0.4,1;EffectColor2,1,1,1,1,1;
+		effectperiod,0.5;EffectDelay,0.5;EffectOffset,0.05" />
+		<LAER File="receptors.sprite" OnCommand="x,-32;rotationz,0;EffectClock,beat;DiffuseRamp;EffectColor1,0.4,0.4,0.4,1;EffectColor2,1,1,1,1,1;
+		effectperiod,0.5;EffectDelay,0.5;EffectOffset,0.05" />
+		<LAER File="receptors.sprite" OnCommand="x,32;rotationz,180;EffectClock,beat;DiffuseRamp;EffectColor1,0.4,0.4,0.4,1;EffectColor2,1,1,1,1,1;
+		effectperiod,0.5;EffectDelay,0.5;EffectOffset,0.05" />
+		<LAER File="receptors.sprite" OnCommand="x,96;rotationz,-90;EffectClock,beat;DiffuseRamp;EffectColor1,0.4,0.4,0.4,1;EffectColor2,1,1,1,1,1;
+		effectperiod,0.5;EffectDelay,0.5;EffectOffset,0.05" />
+	</children></LAER>
+	<LAER Type="ActorFrame" InitCommand="%function(self) goty2_stream_p2 = self end" OnCommand="x,SCREEN_WIDTH*0.75;y,SCREEN_CENTER_Y;" ><children>
+		<LAER File="receptors.sprite" OnCommand="x,-96;rotationz,90;EffectClock,beat;DiffuseRamp;EffectColor1,0.4,0.4,0.4,1;EffectColor2,1,1,1,1,1;
+		effectperiod,0.5;EffectDelay,0.5;EffectOffset,0.05" />
+		<LAER File="receptors.sprite" OnCommand="x,-32;rotationz,0;EffectClock,beat;DiffuseRamp;EffectColor1,0.4,0.4,0.4,1;EffectColor2,1,1,1,1,1;
+		effectperiod,0.5;EffectDelay,0.5;EffectOffset,0.05" />
+		<LAER File="receptors.sprite" OnCommand="x,32;rotationz,180;EffectClock,beat;DiffuseRamp;EffectColor1,0.4,0.4,0.4,1;EffectColor2,1,1,1,1,1;
+		effectperiod,0.5;EffectDelay,0.5;EffectOffset,0.05" />
+		<LAER File="receptors.sprite" OnCommand="x,96;rotationz,-90;EffectClock,beat;DiffuseRamp;EffectColor1,0.4,0.4,0.4,1;EffectColor2,1,1,1,1,1;
+		effectperiod,0.5;EffectDelay,0.5;EffectOffset,0.05" />
+	</children></LAER>
+	
+	<LAER Type="ActorFrame" InitCommand="%function(self) goty2_stream_nfp1 = self; end"> <children>
+		<LAER File="arrow.sprite" OnCommand="hidden,1;sleep,0.02;queuecommand,SetMe"
+		SetMeCommand="%function(self) table.insert(goty2_stream_note[1],{actor = self}) end"
+		HideCommand="%function(self) self:hidden(1); end" />
+		<LAER File="arrow.sprite" OnCommand="hidden,1;sleep,0.02;queuecommand,SetMe"
+		SetMeCommand="%function(self) table.insert(goty2_stream_note[1],{actor = self}) end"
+		HideCommand="%function(self) self:hidden(1); end" />
+		<LAER File="arrow.sprite" OnCommand="hidden,1;sleep,0.02;queuecommand,SetMe"
+		SetMeCommand="%function(self) table.insert(goty2_stream_note[1],{actor = self}) end"
+		HideCommand="%function(self) self:hidden(1); end" />
+		<LAER File="arrow.sprite" OnCommand="hidden,1;sleep,0.02;queuecommand,SetMe"
+		SetMeCommand="%function(self) table.insert(goty2_stream_note[1],{actor = self}) end"
+		HideCommand="%function(self) self:hidden(1); end" />
+		<LAER File="arrow.sprite" OnCommand="hidden,1;sleep,0.02;queuecommand,SetMe"
+		SetMeCommand="%function(self) table.insert(goty2_stream_note[1],{actor = self}) end"
+		HideCommand="%function(self) self:hidden(1); end" />
+		<LAER File="arrow.sprite" OnCommand="hidden,1;sleep,0.02;queuecommand,SetMe"
+		SetMeCommand="%function(self) table.insert(goty2_stream_note[1],{actor = self}) end"
+		HideCommand="%function(self) self:hidden(1); end" />
+		<LAER File="arrow.sprite" OnCommand="hidden,1;sleep,0.02;queuecommand,SetMe"
+		SetMeCommand="%function(self) table.insert(goty2_stream_note[1],{actor = self}) end"
+		HideCommand="%function(self) self:hidden(1); end" />
+		<LAER File="arrow.sprite" OnCommand="hidden,1;sleep,0.02;queuecommand,SetMe"
+		SetMeCommand="%function(self) table.insert(goty2_stream_note[1],{actor = self}) end"
+		HideCommand="%function(self) self:hidden(1); end" />
+		<LAER File="arrow.sprite" OnCommand="hidden,1;sleep,0.02;queuecommand,SetMe"
+		SetMeCommand="%function(self) table.insert(goty2_stream_note[1],{actor = self}) end"
+		HideCommand="%function(self) self:hidden(1); end" />
+		<LAER File="arrow.sprite" OnCommand="hidden,1;sleep,0.02;queuecommand,SetMe"
+		SetMeCommand="%function(self) table.insert(goty2_stream_note[1],{actor = self}) end"
+		HideCommand="%function(self) self:hidden(1); end" />
+		<LAER File="arrow.sprite" OnCommand="hidden,1;sleep,0.02;queuecommand,SetMe"
+		SetMeCommand="%function(self) table.insert(goty2_stream_note[1],{actor = self}) end"
+		HideCommand="%function(self) self:hidden(1); end" />
+		<LAER File="arrow.sprite" OnCommand="hidden,1;sleep,0.02;queuecommand,SetMe"
+		SetMeCommand="%function(self) table.insert(goty2_stream_note[1],{actor = self}) end"
+		HideCommand="%function(self) self:hidden(1); end" />
+		<LAER File="arrow.sprite" OnCommand="hidden,1;sleep,0.02;queuecommand,SetMe"
+		SetMeCommand="%function(self) table.insert(goty2_stream_note[1],{actor = self}) end"
+		HideCommand="%function(self) self:hidden(1); end" />
+		<LAER File="arrow.sprite" OnCommand="hidden,1;sleep,0.02;queuecommand,SetMe"
+		SetMeCommand="%function(self) table.insert(goty2_stream_note[1],{actor = self}) end"
+		HideCommand="%function(self) self:hidden(1); end" />
+		<LAER File="arrow.sprite" OnCommand="hidden,1;sleep,0.02;queuecommand,SetMe"
+		SetMeCommand="%function(self) table.insert(goty2_stream_note[1],{actor = self}) end"
+		HideCommand="%function(self) self:hidden(1); end" />
+		<LAER File="arrow.sprite" OnCommand="hidden,1;sleep,0.02;queuecommand,SetMe"
+		SetMeCommand="%function(self) table.insert(goty2_stream_note[1],{actor = self}) end"
+		HideCommand="%function(self) self:hidden(1); end" />
+		<LAER File="arrow.sprite" OnCommand="hidden,1;sleep,0.02;queuecommand,SetMe"
+		SetMeCommand="%function(self) table.insert(goty2_stream_note[1],{actor = self}) end"
+		HideCommand="%function(self) self:hidden(1); end" />
+		<LAER File="arrow.sprite" OnCommand="hidden,1;sleep,0.02;queuecommand,SetMe"
+		SetMeCommand="%function(self) table.insert(goty2_stream_note[1],{actor = self}) end"
+		HideCommand="%function(self) self:hidden(1); end" />
+		<LAER File="arrow.sprite" OnCommand="hidden,1;sleep,0.02;queuecommand,SetMe"
+		SetMeCommand="%function(self) table.insert(goty2_stream_note[1],{actor = self}) end"
+		HideCommand="%function(self) self:hidden(1); end" />
+		<LAER File="arrow.sprite" OnCommand="hidden,1;sleep,0.02;queuecommand,SetMe"
+		SetMeCommand="%function(self) table.insert(goty2_stream_note[1],{actor = self}) end"
+		HideCommand="%function(self) self:hidden(1); end" />
+	</children></LAER>
+	
+	<LAER Type="ActorFrame" InitCommand="%function(self) goty2_stream_nfp2 = self; end"> <children>
+		<LAER File="arrow.sprite" OnCommand="hidden,1;sleep,0.02;queuecommand,SetMe"
+		SetMeCommand="%function(self) table.insert(goty2_stream_note[2],{actor = self}) end"
+		HideCommand="%function(self) self:hidden(1); end" />
+		<LAER File="arrow.sprite" OnCommand="hidden,1;sleep,0.02;queuecommand,SetMe"
+		SetMeCommand="%function(self) table.insert(goty2_stream_note[2],{actor = self}) end"
+		HideCommand="%function(self) self:hidden(1); end" />
+		<LAER File="arrow.sprite" OnCommand="hidden,1;sleep,0.02;queuecommand,SetMe"
+		SetMeCommand="%function(self) table.insert(goty2_stream_note[2],{actor = self}) end"
+		HideCommand="%function(self) self:hidden(1); end" />
+		<LAER File="arrow.sprite" OnCommand="hidden,1;sleep,0.02;queuecommand,SetMe"
+		SetMeCommand="%function(self) table.insert(goty2_stream_note[2],{actor = self}) end"
+		HideCommand="%function(self) self:hidden(1); end" />
+		<LAER File="arrow.sprite" OnCommand="hidden,1;sleep,0.02;queuecommand,SetMe"
+		SetMeCommand="%function(self) table.insert(goty2_stream_note[2],{actor = self}) end"
+		HideCommand="%function(self) self:hidden(1); end" />
+		<LAER File="arrow.sprite" OnCommand="hidden,1;sleep,0.02;queuecommand,SetMe"
+		SetMeCommand="%function(self) table.insert(goty2_stream_note[2],{actor = self}) end"
+		HideCommand="%function(self) self:hidden(1); end" />
+		<LAER File="arrow.sprite" OnCommand="hidden,1;sleep,0.02;queuecommand,SetMe"
+		SetMeCommand="%function(self) table.insert(goty2_stream_note[2],{actor = self}) end"
+		HideCommand="%function(self) self:hidden(1); end" />
+		<LAER File="arrow.sprite" OnCommand="hidden,1;sleep,0.02;queuecommand,SetMe"
+		SetMeCommand="%function(self) table.insert(goty2_stream_note[2],{actor = self}) end"
+		HideCommand="%function(self) self:hidden(1); end" />
+		<LAER File="arrow.sprite" OnCommand="hidden,1;sleep,0.02;queuecommand,SetMe"
+		SetMeCommand="%function(self) table.insert(goty2_stream_note[2],{actor = self}) end"
+		HideCommand="%function(self) self:hidden(1); end" />
+		<LAER File="arrow.sprite" OnCommand="hidden,1;sleep,0.02;queuecommand,SetMe"
+		SetMeCommand="%function(self) table.insert(goty2_stream_note[2],{actor = self}) end"
+		HideCommand="%function(self) self:hidden(1); end" />
+		<LAER File="arrow.sprite" OnCommand="hidden,1;sleep,0.02;queuecommand,SetMe"
+		SetMeCommand="%function(self) table.insert(goty2_stream_note[2],{actor = self}) end"
+		HideCommand="%function(self) self:hidden(1); end" />
+		<LAER File="arrow.sprite" OnCommand="hidden,1;sleep,0.02;queuecommand,SetMe"
+		SetMeCommand="%function(self) table.insert(goty2_stream_note[2],{actor = self}) end"
+		HideCommand="%function(self) self:hidden(1); end" />
+		<LAER File="arrow.sprite" OnCommand="hidden,1;sleep,0.02;queuecommand,SetMe"
+		SetMeCommand="%function(self) table.insert(goty2_stream_note[2],{actor = self}) end"
+		HideCommand="%function(self) self:hidden(1); end" />
+		<LAER File="arrow.sprite" OnCommand="hidden,1;sleep,0.02;queuecommand,SetMe"
+		SetMeCommand="%function(self) table.insert(goty2_stream_note[2],{actor = self}) end"
+		HideCommand="%function(self) self:hidden(1); end" />
+		<LAER File="arrow.sprite" OnCommand="hidden,1;sleep,0.02;queuecommand,SetMe"
+		SetMeCommand="%function(self) table.insert(goty2_stream_note[2],{actor = self}) end"
+		HideCommand="%function(self) self:hidden(1); end" />
+		<LAER File="arrow.sprite" OnCommand="hidden,1;sleep,0.02;queuecommand,SetMe"
+		SetMeCommand="%function(self) table.insert(goty2_stream_note[2],{actor = self}) end"
+		HideCommand="%function(self) self:hidden(1); end" />
+		<LAER File="arrow.sprite" OnCommand="hidden,1;sleep,0.02;queuecommand,SetMe"
+		SetMeCommand="%function(self) table.insert(goty2_stream_note[2],{actor = self}) end"
+		HideCommand="%function(self) self:hidden(1); end" />
+		<LAER File="arrow.sprite" OnCommand="hidden,1;sleep,0.02;queuecommand,SetMe"
+		SetMeCommand="%function(self) table.insert(goty2_stream_note[2],{actor = self}) end"
+		HideCommand="%function(self) self:hidden(1); end" />
+		<LAER File="arrow.sprite" OnCommand="hidden,1;sleep,0.02;queuecommand,SetMe"
+		SetMeCommand="%function(self) table.insert(goty2_stream_note[2],{actor = self}) end"
+		HideCommand="%function(self) self:hidden(1); end" />
+		<LAER File="arrow.sprite" OnCommand="hidden,1;sleep,0.02;queuecommand,SetMe"
+		SetMeCommand="%function(self) table.insert(goty2_stream_note[2],{actor = self}) end"
+		HideCommand="%function(self) self:hidden(1); end" />
+	</children></LAER>
+	
+	<INPUTGAME
+		Type="Quad" OnCommand="hidden,1"
+		Debug1MessageCommand="%function(self)
+			--goty2_gamestate = 'mainmenu'
+			
+			
+		end"
+		
+		DisqualifyPlayer1MessageCommand="%function(self)
+			--goty2_hitStart();
+		end"
+		DisqualifyPlayer2MessageCommand="%function(self)
+			--goty2_hitStart();
+		end"
+		
+		StepLeftP1MessageCommand="%function (self)
+			goty2_keys[6-5] = 1;
+		end"
+		StepP1LeftPressedMessageCommand="%function (self)
+			--Trace('Entity!');
+			goty2_keys[6-5] = 1;
+		end"
+		StepDownP1MessageCommand="%function (self)
+			goty2_keys[7-5] = 1;
+		end"
+		StepP1DownPressedMessageCommand="%function (self)
+			goty2_keys[7-5] = 1;
+		end"
+		StepUpP1MessageCommand="%function (self)
+			goty2_keys[8-5] = 1;
+		end"
+		StepP1UpPressedMessageCommand="%function (self)
+			goty2_keys[8-5] = 1;
+		end"
+		StepRightP1MessageCommand="%function (self)
+			goty2_keys[9-5] = 1;
+		end"
+		StepP1RightPressedMessageCommand="%function (self)
+			goty2_keys[9-5] = 1;
+		end"
+		
+		LiftLeftP1MessageCommand="%function (self)
+			goty2_keys[6-5] = 0;
+		end"
+		StepP1LeftLiftedMessageCommand="%function (self)
+			goty2_keys[6-5] = 0;
+		end"
+		LiftDownP1MessageCommand="%function (self)
+			goty2_keys[7-5] = 0;
+		end"
+		StepP1DownLiftedMessageCommand="%function (self)
+			goty2_keys[7-5] = 0;
+		end"
+		LiftUpP1MessageCommand="%function (self)
+			goty2_keys[8-5] = 0;
+		end"
+		StepP1UpLiftedMessageCommand="%function (self)
+			goty2_keys[8-5] = 0;
+		end"
+		LiftRightP1MessageCommand="%function (self)
+			goty2_keys[9-5] = 0;
+		end"
+		StepP1RightLiftedMessageCommand="%function (self)
+			goty2_keys[9-5] = 0;
+		end"
+		
+		StepLeftP2MessageCommand="%function (self)
+			goty2_keys[6-1] = 1;
+		end"
+		StepP2LeftPressedMessageCommand="%function (self)
+			goty2_keys[6-1] = 1;
+		end"
+		StepDownP2MessageCommand="%function (self)
+			goty2_keys[7-1] = 1;
+		end"
+		StepP2DownPressedMessageCommand="%function (self)
+			goty2_keys[7-1] = 1;
+		end"
+		StepUpP2MessageCommand="%function (self)
+			goty2_keys[8-1] = 1;
+		end"
+		StepP2UpPressedMessageCommand="%function (self)
+			goty2_keys[8-1] = 1;
+		end"
+		StepRightP2MessageCommand="%function (self)
+			goty2_keys[9-1] = 1;
+		end"
+		StepP2RightPressedMessageCommand="%function (self)
+			goty2_keys[9-1] = 1;
+		end"
+		
+		LiftLeftP2MessageCommand="%function (self)
+			goty2_keys[6-1] = 0;
+		end"
+		StepP2LeftLiftedMessageCommand="%function (self)
+			goty2_keys[6-1] = 0;
+		end"
+		LiftDownP2MessageCommand="%function (self)
+			goty2_keys[7-1] = 0;
+		end"
+		StepP2DownLiftedMessageCommand="%function (self)
+			goty2_keys[7-1] = 0;
+		end"
+		LiftUpP2MessageCommand="%function (self)
+			goty2_keys[8-1] = 0;
+		end"
+		StepP2UpLiftedMessageCommand="%function (self)
+			goty2_keys[8-1] = 0;
+		end"
+		LiftRightP2MessageCommand="%function (self)
+			goty2_keys[9-1] = 0;
+		end"
+		StepP2RightLiftedMessageCommand="%function (self)
+			goty2_keys[9-1] = 0;
+		end"
+		
+		MenuLeftP2PressMessageCommand="%function (self)
+			goty2_editor = true;
+			goty2_divine = false;
+			--goty2_cpus = false;
+			goty2_keys[6-1] = 1;
+		end"
+		MenuDownP2PressMessageCommand="%function (self)
+			goty2_editor = true;
+			goty2_divine = false;
+			--goty2_cpus = false;
+			goty2_keys[7-1] = 1;
+		end"
+		MenuUpP2PressMessageCommand="%function (self)
+			goty2_editor = true;
+			goty2_divine = false;
+			--goty2_cpus = false;
+			goty2_keys[8-1] = 1;
+			if goty2_gamestate == 'gamemenu' then
+				goty2_gamemenu_allowaccess = true;
+			end
+		end"
+		MenuRightP2PressMessageCommand="%function (self)
+			goty2_editor = true;
+			goty2_divine = false;
+			--goty2_cpus = false;
+			goty2_keys[9-1] = 1;
+		end"
+		MenuLeftP2LiftMessageCommand="%function (self)
+			goty2_keys[6-1] = 0;
+		end"
+		MenuDownP2LiftMessageCommand="%function (self)
+			goty2_keys[7-1] = 0;
+		end"
+		MenuUpP2LiftMessageCommand="%function (self)
+			goty2_keys[8-1] = 0;
+			goty2_gamemenu_allowaccess = false;
+		end"
+		MenuRightP2LiftMessageCommand="%function (self)
+			goty2_keys[9-1] = 0;
+		end"
+	/>
+	
+	<VOX Type="Quad" OnCommand="horizalign,left;x,98;y,52;zoomto,(SCREEN_WIDTH-200)+4,20;diffuse,0,0,0,1"
+	StartTimerMessageCommand="linear,(79-16)*(60/150);zoomto,4,20;diffuse,0,0,0,1" TimeUpMessageCommand="finishtweening;zoom,0;" />
+	<VOX Type="Quad" OnCommand="horizalign,left;x,100;y,52;zoomto,SCREEN_WIDTH-200,16;diffuse,0,2,0,1"
+	StartTimerMessageCommand="linear,(79-16)*(60/150);zoomto,0,16;diffuse,2,0,0,1" />
+	
+	<VOX Type="ActorFrame" OnCommand="x,70;y,45;zoom,0.45;pulse;effectmagnitude,1.2,1,0;effectclock,bgm;effectperiod,.5;effectdelay,.5;effectoffset,0.6"
+	TimeUpMessageCommand="hidden,1" > 
+	<children>
+		<Layer
+			File="stopwatch"
+			InitCommand="zbuffer,1"
+		/>
+		<Layer
+			Type="ActorFrame"
+			OnCommand="x,8;y,16;rotationz,15;spin;effectmagnitude,0,0,+45;effectclock,bgm"
+		> <children>
+			<AutoActor 
+				File="hand"
+				InitCommand="zbuffer,1;horizalign,right;vertalign,bottom;x,24;y,16"
+			/>
+		</children> </Layer>
+		<Layer
+			File="center"
+			InitCommand="zbuffer,1;horizalign,right;vertalign,bottom;x,36;y,36;hidden,0"
+		/>
+	</children> </VOX>
+	
+	<VOX File="explosion" OnCommand="zoom,0;"
+	TimeUpMessageCommand="animate,1;setstate,0;x,70;y,45;zoom,2;sleep,1.25;zoom,0;" />
+	
+	<VOX File="_black" OnCommand="x,SCREEN_CENTER_X;y,SCREEN_CENTER_Y;zoomto,SCREEN_WIDTH,SCREEN_HEIGHT;sleep,14*(60/150);linear,60/150;diffusealpha,0"/>
+	<VOX File="text1" OnCommand="x,SCREEN_CENTER_X;y,SCREEN_CENTER_Y;diffusealpha,0;sleep,0;
+	linear,0.4;diffusealpha,1;sleep,8*(60/150);linear,0.4;diffusealpha,0"/>
+	<VOX File="text2" OnCommand="x,SCREEN_CENTER_X;y,SCREEN_CENTER_Y;diffusealpha,0;sleep,8*(60/150)+0.4;
+	linear,0.4;diffusealpha,1;sleep,6*(60/150)-0.8;linear,0;diffusealpha,0"/>
+	<VOX File="text3" OnCommand="vibrate;effectmagnitude,2,2,2;x,SCREEN_CENTER_X;y,SCREEN_CENTER_Y;diffusealpha,0;sleep,14*(60/150);
+	linear,0;diffusealpha,1;sleep,1;linear,0.4;diffusealpha,0"/>
+	
+	<LAER Type="Quad" InitCommand="%function(self) goty2_stream_controller = self end" />
+	
+	<Updater
+	Type="Quad"
+	OnCommand="%function(self)
+		goty2_started = false;
+		mod_firstSeenBeat = GAMESTATE:GetSongBeat();
+		fgcurcommand = 1;
+		self:sleep(0.02);
+		self:queuecommand('Update');
+	end"
+	UpdateCommand="%function(self)
+		
+		local beat = GAMESTATE:GetSongBeat();
+		
+		if beat > mod_firstSeenBeat+1 and not goty2_started then
+			MESSAGEMAN:Broadcast('Start');
+			goty2_started = true;
+		end
+		
+		if beat > 13.6 and fgcurcommand == 1 then
+			goty2_sound('airhorn.ogg');
+			fgcurcommand = fgcurcommand+1;
+		end
+		
+		if beat > 16 and fgcurcommand == 2 then
+			MESSAGEMAN:Broadcast('StartTimer');
+			fgcurcommand = fgcurcommand+1;
+		end
+		
+		if beat > 78.6 and fgcurcommand == 3 then
+			goty2_sound('airhorn.ogg');
+			goty2_sound('bang.ogg');
+			fgcurcommand = fgcurcommand+1;
+		end
+		
+		if beat > 79 and fgcurcommand == 4 then
+			MESSAGEMAN:Broadcast('TimeUp');
+			
+			local maxscore = math.max(goty2_stream_score[1], goty2_stream_score[2])
+			if maxscore > goty2_stream_todayBest then
+				goty2_stream_todayBest = maxscore
+				goty2_sound('record.ogg');
+				MESSAGEMAN:Broadcast('UpdateTodayBest');
+			end
+			if maxscore > goty2_stream_highScore then
+				taroProfile.UKSRT7Stream.highScore = maxscore
+				goty2_stream_highScore = maxscore;
+				MESSAGEMAN:Broadcast('UpdateHighScore');
+			end
+			
+			if _G['goty2_stream_p1ctexta'] then
+				_G['goty2_stream_p1ctexta']:diffusealpha(1);
+			end
+			if _G['goty2_stream_p2ctexta'] then
+				_G['goty2_stream_p2ctexta']:diffusealpha(1);
+			end
+			
+			for pn=1,2 do
+				if goty2_stream_score[pn] == maxscore then
+					if _G['goty2_stream_p'..pn..'ctexta'] then
+						_G['goty2_stream_p'..pn..'ctexta']:rainbow();
+					end
+				end
+			end
+			
+			fgcurcommand = fgcurcommand+1;
+		end
+		
+		self:sleep(0.02);
+		self:queuecommand('Update');
+	end"
+	/>
+	
+	<ZLayer
+		File="_eurostile outline"
+		Text="WINNER"
+		OnCommand="x,SCREEN_CENTER_X-160;y,SCREEN_CENTER_Y-14-35;zoom,1.3;diffusealpha,0;sleep,0"
+		TimeUpMessageCommand="%function(self)
+			if goty2_stream_score[1] > goty2_stream_score[2] then
+				self:settext('WINNER');
+				if _G['goty2_stream_p1ctexta'] then
+					_G['goty2_stream_p1ctexta']:rainbow();
+				end
+				self:rainbow();
+			end
+			if goty2_stream_score[1] < goty2_stream_score[2] then
+				self:settext('LOSE...');
+				self:diffuse(0.4,0.6,1,1);
+				self:zoom(1.1);
+			end
+			if goty2_stream_score[1] == goty2_stream_score[2] then
+				self:settext('DRAW');
+				self:zoom(1.1);
+			end
+			self:diffusealpha(1);
+		end"
+		Condition="GAMESTATE:IsHumanPlayer(0) and GAMESTATE:IsHumanPlayer(1)"
+	/>
+	
+	<ZLayer
+		File="_eurostile outline"
+		Text="WINNER"
+		OnCommand="x,SCREEN_CENTER_X+160;y,SCREEN_CENTER_Y-14-35;zoom,1.3;diffusealpha,0;sleep,0"
+		TimeUpMessageCommand="%function(self)
+			if goty2_stream_score[1] < goty2_stream_score[2] then
+				self:settext('WINNER');
+				if _G['goty2_stream_p2ctexta'] then
+					_G['goty2_stream_p2ctexta']:rainbow();
+				end
+				self:rainbow();
+			end
+			if goty2_stream_score[1] > goty2_stream_score[2] then
+				self:settext('LOSE...');
+				self:diffuse(0.4,0.6,1,1);
+				self:zoom(1.1);
+			end
+			if goty2_stream_score[1] == goty2_stream_score[2] then
+				self:settext('DRAW');
+				self:zoom(1.1);
+			end
+			self:diffusealpha(1);
+		end"
+		Condition="GAMESTATE:IsHumanPlayer(0) and GAMESTATE:IsHumanPlayer(1)"
+	/>
+	
+	<ZLAER Type="BitmapText" File="Combo numbers" Text="0" InitCommand="%function(self) goty2_stream_p1ctexta = self; end"
+	OnCommand="x,SCREEN_WIDTH*0.25;y,SCREEN_HEIGHT*0.5;diffusealpha,0;shadowlength,0;" Condition="GAMESTATE:IsHumanPlayer(0)" />
+	<ZLAER Type="BitmapText" File="Combo numbers" Text="0" InitCommand="%function(self) goty2_stream_p2ctexta = self; end"
+	OnCommand="x,SCREEN_WIDTH*0.75;y,SCREEN_HEIGHT*0.5;diffusealpha,0;shadowlength,0;" Condition="GAMESTATE:IsHumanPlayer(1)" />
+	
+	<ZLayer
+		File="_eurostile outline"
+		Text="Average nps"
+		OnCommand="x,SCREEN_CENTER_X-160;y,SCREEN_CENTER_Y-14+70;zoom,0.8;diffusealpha,0;sleep,0"
+		TimeUpMessageCommand="diffusealpha,1"
+		Condition="GAMESTATE:IsHumanPlayer(0)"
+	/>
+	<ZLayer
+		File="_eurostile outline"
+		Text=""
+		OnCommand="x,SCREEN_CENTER_X-160;y,SCREEN_CENTER_Y+14+70;zoom,0.8;diffusealpha,0;sleep,0"
+		TimeUpMessageCommand="playcommand,Do"
+		DoCommand="%function(self)
+			self:settext(goty2_round(goty2_stream_nps[1]/1.5));
+			self:linear(0.5);
+			self:diffusealpha(1);
+		end"
+		Condition="GAMESTATE:IsHumanPlayer(0)"
+	/>
+	
+	<ZLayer
+		File="_eurostile outline"
+		Text="Average nps"
+		OnCommand="x,SCREEN_CENTER_X+160;y,SCREEN_CENTER_Y-14+70;zoom,0.8;diffusealpha,0;sleep,0"
+		TimeUpMessageCommand="diffusealpha,1"
+		Condition="GAMESTATE:IsHumanPlayer(1)"
+	/>
+	<ZLayer
+		File="_eurostile outline"
+		Text=""
+		OnCommand="x,SCREEN_CENTER_X+160;y,SCREEN_CENTER_Y+14+70;zoom,0.8;diffusealpha,0;sleep,0"
+		TimeUpMessageCommand="playcommand,Do"
+		DoCommand="%function(self)
+			self:settext(goty2_round(goty2_stream_nps[2]/1.5));
+			self:linear(0.5);
+			self:diffusealpha(1);
+		end"
+		Condition="GAMESTATE:IsHumanPlayer(1)"
+	/>
+	
+	<ZLayer
+		File="_eurostile outline"
+		Text="HIGH SCORE"
+		OnCommand="vertalign,top;x,SCREEN_CENTER_X;y,SCREEN_BOTTOM-80;zoom,0.8;diffusealpha,0;sleep,0;linear,0.5;diffusealpha,1;"
+	/>
+	<ZLayer
+		File="_eurostile outline"
+		Text=""
+		OnCommand="vertalign,top;x,SCREEN_CENTER_X;y,SCREEN_BOTTOM-52;zoom,0.8;diffusealpha,0;sleep,0;queuecommand,Do"
+		UpdateHighScoreMessageCommand="rainbow;playcommand,Do"
+		DoCommand="%function(self)
+			self:settext(goty2_stream_highScore);
+			self:linear(0.5);
+			self:diffusealpha(1);
+		end"
+	/>
+	
+	<ZLayer
+		File="_eurostile outline"
+		Text="TODAY'S BEST"
+		OnCommand="vertalign,top;x,SCREEN_CENTER_X;y,SCREEN_BOTTOM-80-56;zoom,0.8;diffusealpha,0;sleep,0;linear,0.5;diffusealpha,1;"
+	/>
+	<ZLayer
+		File="_eurostile outline"
+		Text=""
+		OnCommand="vertalign,top;x,SCREEN_CENTER_X;y,SCREEN_BOTTOM-52-56;zoom,0.8;diffusealpha,0;sleep,0;queuecommand,Do"
+		UpdateTodayBestMessageCommand="rainbow;playcommand,Do"
+		DoCommand="%function(self)
+			self:settext(goty2_stream_todayBest);
+			self:linear(0.5);
+			self:diffusealpha(1);
+		end"
+	/>
+	
+	<ZVOX File="noteskinwarning" OnCommand="x,SCREEN_CENTER_X;y,SCREEN_CENTER_Y;diffusealpha,0"
+	NoteskinWarningMessageCommand="%function(self)
+		goty2_sound('airhorn.ogg');
+		self:linear(0.5);
+		self:diffusealpha(1);
+		self:sleep(8);
+		self:linear(0.4);
+		self:diffusealpha(0);
+	end" />
+	
+</children></GAME>
